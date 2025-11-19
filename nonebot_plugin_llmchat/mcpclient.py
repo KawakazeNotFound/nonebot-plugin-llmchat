@@ -30,8 +30,9 @@ class MCPClient:
         self.server_config = server_config
         self.sessions = {}
         self.exit_stack = AsyncExitStack()
-        # 添加工具列表缓存
-        self._tools_cache: list | None = None
+        # 分别缓存群聊和私聊的工具列表
+        self._tools_cache_group: list | None = None
+        self._tools_cache_private: list | None = None
         self._cache_initialized = False
         # 初始化OneBot工具
         self.onebot_tools = OneBotTools()
@@ -107,12 +108,18 @@ class MCPClient:
         return SessionContext()
 
     async def get_available_tools(self, is_group: bool):
-        """获取可用工具列表，使用缓存机制"""
-        if self._tools_cache is not None:
-            logger.debug("返回缓存的工具列表")
-            return self._tools_cache
+        """获取可用工具列表，使用缓存机制
+        
+        Args:
+            is_group: 是否是群聊（True为群聊，False为私聊）
+        """
+        # 根据是群聊还是私聊返回对应的缓存
+        cache = self._tools_cache_group if is_group else self._tools_cache_private
+        if cache is not None:
+            logger.debug(f"返回缓存的工具列表（{'群聊' if is_group else '私聊'}）")
+            return cache
 
-        logger.info(f"初始化工具列表缓存，需要连接{len(self.server_config)}个服务器")
+        logger.info(f"初始化{'群聊' if is_group else '私聊'}工具列表缓存，需要连接{len(self.server_config)}个服务器")
         available_tools = []
 
         if is_group:
@@ -121,7 +128,7 @@ class MCPClient:
             available_tools.extend(onebot_tools)
             logger.debug(f"添加了{len(onebot_tools)}个OneBot内置工具")
 
-        # 添加MCP服务器工具
+        # 添加MCP服务器工具（群聊和私聊都可用）
         for server_name in self.server_config.keys():
             logger.debug(f"正在从服务器[{server_name}]获取工具列表")
             async with self._create_session_context(server_name) as session:
@@ -141,10 +148,14 @@ class MCPClient:
                     for tool in tools
                 )
 
-        # 缓存工具列表
-        self._tools_cache = available_tools
+        # 分别缓存群聊和私聊的工具列表
+        if is_group:
+            self._tools_cache_group = available_tools
+        else:
+            self._tools_cache_private = available_tools
+        
         self._cache_initialized = True
-        logger.info(f"工具列表缓存完成，共缓存{len(available_tools)}个工具")
+        logger.info(f"{'群聊' if is_group else '私聊'}工具列表缓存完成，共缓存{len(available_tools)}个工具")
         return available_tools
 
     async def call_tool(self, tool_name: str, tool_args: dict, group_id: int | None = None, bot_id: str | None = None, user_id: int | None = None):
@@ -210,7 +221,8 @@ class MCPClient:
     def clear_tools_cache(self):
         """清除工具列表缓存"""
         logger.info("清除工具列表缓存")
-        self._tools_cache = None
+        self._tools_cache_group = None
+        self._tools_cache_private = None
         self._cache_initialized = False
 
     async def cleanup(self):
