@@ -482,7 +482,8 @@ async def process_messages(context_id: int, is_group: bool = True):
                         tool_name,
                         tool_args,
                         group_id=event.group_id,
-                        bot_id=str(event.self_id)
+                        bot_id=str(event.self_id),
+                        user_id=event.user_id
                     )
 
                     new_messages.append({

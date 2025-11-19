@@ -147,14 +147,22 @@ class MCPClient:
         logger.info(f"工具列表缓存完成，共缓存{len(available_tools)}个工具")
         return available_tools
 
-    async def call_tool(self, tool_name: str, tool_args: dict, group_id: int | None = None, bot_id: str | None = None):
-        """按需连接调用工具，调用后立即断开"""
+    async def call_tool(self, tool_name: str, tool_args: dict, group_id: int | None = None, bot_id: str | None = None, user_id: int | None = None):
+        """按需连接调用工具，调用后立即断开
+        
+        Args:
+            tool_name: 工具名称
+            tool_args: 工具参数
+            group_id: 群号（OneBot工具需要）
+            bot_id: 机器人ID（OneBot工具需要）
+            user_id: 用户ID（用于敏感操作的权限检查）
+        """
         # 检查是否是OneBot内置工具
         if tool_name.startswith("ob__"):
             if group_id is None or bot_id is None:
                 return "QQ工具需要提供group_id和bot_id参数"
-            logger.info(f"调用OneBot工具[{tool_name}]")
-            return await self.onebot_tools.call_tool(tool_name, tool_args, group_id, bot_id)
+            logger.info(f"调用OneBot工具[{tool_name}]，用户ID: {user_id}")
+            return await self.onebot_tools.call_tool(tool_name, tool_args, group_id, bot_id, user_id)
 
         # 检查是否是MCP工具
         if tool_name.startswith("mcp__"):

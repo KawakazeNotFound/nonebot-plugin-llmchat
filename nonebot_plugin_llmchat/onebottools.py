@@ -2,12 +2,15 @@ import json
 import time
 from typing import Any, cast
 
-from nonebot import get_bot, logger
+from nonebot import get_bot, get_driver, logger
 from nonebot.adapters.onebot.v11 import Bot
 
 
 class OneBotTools:
     """内置的OneBot群操作工具类"""
+    
+    # 敏感操作列表（需要主人权限）
+    SENSITIVE_OPERATIONS = {"ob__mute_user", "ob__recall_message"}
 
     def __init__(self):
         self.tools = [
@@ -101,8 +104,35 @@ class OneBotTools:
         """获取可用的工具列表"""
         return self.tools
 
-    async def call_tool(self, tool_name: str, tool_args: dict[str, Any], group_id: int, bot_id: str) -> str:
-        """调用指定的工具"""
+    def _is_superuser(self, user_id: int) -> bool:
+        """检查用户是否是主人"""
+        driver = get_driver()
+        return user_id in driver.config.superusers
+
+    async def call_tool(
+        self,
+        tool_name: str,
+        tool_args: dict[str, Any],
+        group_id: int,
+        bot_id: str,
+        user_id: int | None = None,
+    ) -> str:
+        """调用指定的工具
+        
+        Args:
+            tool_name: 工具名称
+            tool_args: 工具参数
+            group_id: 群号
+            bot_id: 机器人ID
+            user_id: 调用者用户ID（用于权限检查，敏感操作需要主人权限）
+        """
+        # 权限检查：敏感操作仅允许主人调用
+        if tool_name in self.SENSITIVE_OPERATIONS:
+            if user_id is None:
+                return "权限不足：无法识别调用者身份，敏感操作被拒绝"
+            if not self._is_superuser(user_id):
+                return f"权限不足：只有主人可以调用 {tool_name} 工具"
+        
         try:
             bot = cast(Bot, get_bot(bot_id))
 
