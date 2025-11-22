@@ -51,6 +51,7 @@ class ScopedConfig(BaseModel):
     )
     enable_private_chat: bool = Field(False, description="是否启用私聊功能")
     private_chat_preset: str = Field("off", description="私聊默认使用的预设名称")
+    allow_bot_to_use_tools: bool = Field(True, description="是否允许机器人使用OneBot工具（机器人自身调用时不进行权限检查）")
 
 
 class Config(BaseModel):

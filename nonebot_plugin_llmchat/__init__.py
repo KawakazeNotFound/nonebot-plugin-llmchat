@@ -478,12 +478,20 @@ async def process_messages(context_id: int, is_group: bool = True):
                     # 发送工具调用提示
                     await handler.send(Message(f"正在使用{mcp_client.get_friendly_name(tool_name)}"))
 
+                    # 对应到context_id和is_group，保证多用户隔离
+                    # 群聊时context_id是group_id，私聊时context_id是user_id
+                    context_group_id = context_id if is_group else 0
+
+                    # 用机器人自己的ID作为权限检查ID（机器人作为调用者）
+                    # 如果启用了allow_bot_to_use_tools，则不进行权限检查（传None）
+                    tool_caller_id = None if plugin_config.allow_bot_to_use_tools else event.self_id
+
                     result = await mcp_client.call_tool(
                         tool_name,
                         tool_args,
-                        group_id=event.group_id,
+                        group_id=context_group_id,
                         bot_id=str(event.self_id),
-                        user_id=event.user_id
+                        user_id=tool_caller_id
                     )
 
                     new_messages.append({

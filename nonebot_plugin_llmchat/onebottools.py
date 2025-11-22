@@ -126,10 +126,13 @@ class OneBotTools:
             bot_id: 机器人ID
             user_id: 调用者用户ID（用于权限检查，敏感操作需要主人权限）
         """
+        # OneBot工具仅在群聊中可用，私聊场景(group_id=0)应拒绝
+        if group_id == 0:
+            return "OneBot工具仅支持在群聊中使用"
+        
         # 权限检查：敏感操作仅允许主人调用
-        if tool_name in self.SENSITIVE_OPERATIONS:
-            if user_id is None:
-                return "权限不足：无法识别调用者身份，敏感操作被拒绝"
+        # 当user_id=None时表示机器人自己在调用，允许所有操作（不进行权限检查）
+        if tool_name in self.SENSITIVE_OPERATIONS and user_id is not None:
             if not self._is_superuser(user_id):
                 return f"权限不足：只有主人可以调用 {tool_name} 工具"
         
